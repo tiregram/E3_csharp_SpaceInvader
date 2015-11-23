@@ -1,0 +1,127 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Drawing;
+using System.Diagnostics;
+using System.Windows.Forms;
+
+namespace SpaceInvaders
+{
+    class Game
+    {
+
+        #region fields and properties
+
+        #region gameplay elements
+        /// <summary>
+        /// A dummy object just for demonstration
+        /// </summary>
+        BalleQuiTombe ball = null;
+        #endregion
+
+        #region game technical elements
+        /// <summary>
+        /// Size of the game area
+        /// </summary>
+        public Size gameSize;
+
+        /// <summary>
+        /// State of the keyboard
+        /// </summary>
+        public HashSet<Keys> keyPressed = new HashSet<Keys>();
+
+        #endregion
+
+        #region static fields (helpers)
+
+        /// <summary>
+        /// Singleton for easy access
+        /// </summary>
+        public static Game game { get; private set; }
+
+        /// <summary>
+        /// A shared black brush
+        /// </summary>
+        private static Brush blackBrush = new SolidBrush(Color.Black);
+
+        /// <summary>
+        /// A shared simple font
+        /// </summary>
+        private static Font defaultFont = new Font("Times New Roman", 24, FontStyle.Bold, GraphicsUnit.Pixel);
+        #endregion
+
+        #endregion
+
+        #region constructors
+        /// <summary>
+        /// Singleton constructor
+        /// </summary>
+        /// <param name="gameSize">Size of the game area</param>
+        /// 
+        /// <returns></returns>
+        public static Game CreateGame(Size gameSize)
+        {
+            if (game == null)
+                game = new Game(gameSize);
+            return game;
+        }
+
+        /// <summary>
+        /// Private constructor
+        /// </summary>
+        /// <param name="gameSize">Size of the game area</param>
+        private Game(Size gameSize)
+        {
+            this.gameSize = gameSize;
+        }
+
+        #endregion
+
+        #region methods
+
+        /// <summary>
+        /// Draw the whole game
+        /// </summary>
+        /// <param name="g">Graphics to draw in</param>
+        public void Draw(Graphics g)
+        {
+            if (ball != null)
+            {
+                g.DrawString("Une balle qui tombe !", defaultFont, blackBrush, 30, 30);
+                ball.Draw(g);
+            }
+            else
+            {
+                g.DrawString("Appuyez sur espace !", defaultFont, blackBrush, 30, 30);
+            }
+        }
+
+        /// <summary>
+        /// Update game
+        /// </summary>
+        public void Update(double deltaT)
+        {
+            
+            // keyboard events
+            if (keyPressed.Contains(Keys.Space))
+            {
+                ball = new BalleQuiTombe(gameSize.Width / 2, gameSize.Height / 2);
+            }
+
+            //move ball
+            if (ball != null)
+            {
+                ball.Move(deltaT,keyPressed);
+                // maybe dead
+                if (!ball.Alive)
+                    ball = null;
+            }
+            
+          
+        }
+        #endregion
+
+
+    }
+}
