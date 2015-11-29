@@ -1,0 +1,85 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Windows.Forms;
+
+namespace SpaceInvaders
+{
+  
+    class MunitionManager
+    {
+        public int curentChose { set; get; }
+        private double keyPressTime;
+        public int number { get; set; }
+        public Missile f  {get;set;}
+
+        /// <summary>
+        /// List of munition 
+        /// 
+        /// </summary>
+        public List<Tuple<Missile,int[]>> listMissile;
+        
+
+        public MunitionManager()
+        {
+            this.listMissile = new List<Tuple<Missile, int[]>>();
+            this.addMisile(new Missile(new Vecteur2D(0,-400),3,true,SpaceInvaders.Properties.Resources.shoot1), -1);
+            this.addMisile(new Missile(new Vecteur2D(0, 0), new Vecteur2D(0, -400), 8,true, SpaceInvaders.Properties.Resources.shoot4 ), 10);
+            this.addMisile(new SuperMissile( new Vecteur2D(0, -300), 2, true, SpaceInvaders.Properties.Resources.shoot1), 3);
+            this.curentChose = 0;
+            
+        }
+        /// <summary>
+        /// add misile to the munition 
+        /// </summary>
+        /// <param name="mis"></param>
+        /// <param name="num"></param>
+        public void addMisile( Missile mis, int num )
+        {
+            if (mis != null && num > 0 || num == -1)
+            {
+                int[] tab = new int[1];
+                tab[0] = num;
+                this.listMissile.Add(new Tuple<Missile, int[]>(mis, tab));
+            }
+        }
+
+        public void move(double deltaT, HashSet<Keys> keyPressed,BasicObjet fireship) {
+
+            if (keyPressed.Contains(Keys.Space) &&! this.listMissile[this.curentChose].Item1.alive  && ( this.listMissile[this.curentChose].Item2[0]>0 || this.listMissile[this.curentChose].Item2[0] == -1))
+            {
+                this.listMissile[this.curentChose].Item1.fire(fireship);
+                if(this.listMissile[this.curentChose].Item2[0]!= -1)
+                    this.listMissile[this.curentChose].Item2[0]--;
+            }
+
+            if (keyPressed.Contains(Keys.A) && keyPressTime <0)
+            {
+
+                this.curentChose = (this.curentChose + 1 + this.listMissile.Count) % this.listMissile.Count;
+                keyPressTime = 0.3;
+            }
+
+            if (keyPressed.Contains(Keys.Z)&&keyPressTime < 0)
+            {
+                keyPressTime = 0.3;
+                this.curentChose = (this.curentChose - 1 + this.listMissile.Count) % this.listMissile.Count;
+            }
+            keyPressTime -= deltaT;
+
+        }
+        
+
+        public void draw(Graphics g){
+
+            g.DrawString(this.curentChose+"-" +(( this.listMissile[curentChose].Item2[0] >= 0 )? this.listMissile[curentChose].Item2[0].ToString():"inf")+ "-"+ this.listMissile[curentChose].Item1.liveOnFire, Game.defaultFont, Game.blackBrush, 25, Game.gameSize.Height - 35);
+            Bitmap  img = this.listMissile[curentChose].Item1.img;
+
+            g.DrawImage(img, 10 , Game.gameSize.Height - 30, img.Width, img.Height);
+            
+
+        }
+}
+}

@@ -19,6 +19,7 @@ namespace SpaceInvaders
         public virtual void move(double udelta)
         {
             this.position += this.speed * udelta;
+
             if (!BasicObjet.colitionTest(this, this.bonusFor)) {
                 this.bonusFor.live += this.live;
                 this.live = -1;

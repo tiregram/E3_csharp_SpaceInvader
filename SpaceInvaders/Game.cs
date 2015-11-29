@@ -5,22 +5,36 @@ using System.Text;
 using System.Drawing;
 using System.Diagnostics;
 using System.Windows.Forms;
+using System.Media;
 
 namespace SpaceInvaders
 {
+    /// <summary>
+    /// this enum was use to manage the state machine
+    ///  
+    /// </summary>
     enum gameState{
+        menu,
         pause,
         start,
         startlevel,
         win,
         lost
     }
-
+    /// <summary>
+    /// the first class to lauch the game,
+    /// 
+    /// </summary>
     class Game
     {
         public double counterTime;
+        private MenuManager menuM;
+        
         private Level lvl;
+        private double timePRESS;
+
         public static Random rnd = new Random(42);
+        
         public Spaceship playerShip;
         public List<Bunker> listBunger;
         private gameState currentState = gameState.start;
@@ -36,6 +50,10 @@ namespace SpaceInvaders
         /// Size of the game area
         /// </summary>
         public static Size gameSize;
+
+        private SoundPlayer sound;
+        private bool music = true;
+
         public EnnemiBlock ennemis;
 
         /// <summary>
@@ -85,17 +103,64 @@ namespace SpaceInvaders
         /// <param name="gameSize">Size of the game area</param>
         private Game(Size gameSize)
         {
-            //ennemis= EnnemiBlock.BUILDER_EnnemiBlock();
-            // ennemis = new EnnemiBlock(new Vecteur2D(0, 0), new Vecteur2D(30,5));
             Game.gameSize = gameSize;
-            // ennemis.addLine(400, 5 , new BasicShip(new Vecteur2D(0,0),  4, SpaceInvaders.Properties.Resources.ship1));
-            //ennemis.addLine(400, 5 , new BasicShip(new Vecteur2D(0,0), 4, SpaceInvaders.Properties.Resources.ship2));
-            //ennemis.addLine(400, 5 , new BasicShip(new Vecteur2D(0, 0), 4, SpaceInvaders.Properties.Resources.ship2));
-            this.currentState = gameState.startlevel;
-            this.counterTime=0;
+
+            sound = new SoundPlayer(SpaceInvaders.Properties.Resources.soundGame);
+            music = true;
+
+            sound.PlayLooping();
+
+            this.menuM = new MenuManager();
+            this.menuM.add(new MenuItem("Jouer", "Lance une partie",
+                delegate() {
+                    this.currentState = gameState.startlevel ;
+                    return true; }
+            ));
+           
+
+            this.menuM.add(new MenuItem("Music on/off", "Lance une partie",
+                delegate () {
+                    if (this.music) {
+                        this.sound.Stop();
+                        this.music = false;
+                    }
+                    else
+                    {
+                        this.sound.Play();
+                        this.music = true;
+                    }
+                    return true;
+                }
+            ));
+
+            this.menuM.add(new MenuItem("Chargé", "Lance une partie", delegate () {
+               
+                OpenFileDialog openFileDialog1 = new OpenFileDialog();
+
+                openFileDialog1.InitialDirectory = "c:\\";
+                openFileDialog1.Filter = "txt files (*.txt)|*.txt|All files (*.*)|*.*";
+                openFileDialog1.FilterIndex = 2;
+                openFileDialog1.RestoreDirectory = true;
+
+                if (openFileDialog1.ShowDialog() == DialogResult.OK)
+                {
+                    try
+                    {
+                        
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show("Error: Could not read file from disk. Original error: " + ex.Message);
+                    }
+                }
+
             
+                
 
-
+                return true; }));
+            this.menuM.add(new MenuItem("Quitter", "Lance une partie", delegate () { Application.Exit(); return true; }));
+            this.currentState = gameState.menu;
+            this.counterTime=0;
         }
 
         #endregion
@@ -112,8 +177,9 @@ namespace SpaceInvaders
             
             switch (currentState) {
                 case gameState.pause:
-                g.DrawString("PAUSE", defaultFont, blackBrush, 30, 30);
-            break;
+                    g.DrawString("PAUSE", defaultFont, blackBrush, 30, 30);
+
+                    break;
                 case gameState.startlevel:
                     if (this.lvl == null) return;
                     g.DrawString("Level:" + this.lvl.num + " " + this.lvl.name , defaultFont, blackBrush, 30, 30);
@@ -124,15 +190,21 @@ namespace SpaceInvaders
                     g.DrawString("win", defaultFont, blackBrush, 30, 30);
                     g.DrawString("press N", defaultFont, blackBrush, 30,100);
                     break;
-           case gameState.lost:
+                case gameState.lost:
                     g.DrawString("lost", defaultFont, blackBrush, 30, 30);
                     g.DrawString("press R", defaultFont, blackBrush, 30, 100);
+                    break;
+                case gameState.menu:
+                    this.menuM.draw(g);
+
+
                     break;
 
                 case gameState.start:
                     
                     playerShip.draw(g);
                     ennemis.draw(g);
+
                     foreach (Bunker a in listBunger)
                         a.draw(g);
                     foreach (Missile a in Missile.misileList)
@@ -149,13 +221,19 @@ namespace SpaceInvaders
 
         /// <summary>
         /// Update game
+        /// you can
+        ///     change the possition the state of the game 
+        /// you can't
+        ///     draw somthing thanx to do it in draw()
         /// </summary>
         public void Update(double deltaT)
         {
             bool init = false;
             switch (currentState)
             {
-
+                case gameState.menu:
+                    this.menuM.move(deltaT,keyPressed);
+                    break;
                 case gameState.startlevel:
 
                     if (this.lvl == null) {
@@ -208,26 +286,34 @@ namespace SpaceInvaders
                         a.move(deltaT);
                     }
 
-                    if (keyPressed.Contains(Keys.P))
-                    {
-                        currentState = gameState.pause;
+                    this.ennemis.colitionPlayer(this.playerShip);
+                    this.conditionLevelWin();
+                    this.conditionLevelLoose();
+
+                    if (keyPressed.Contains(Keys.P) && timePRESS < 0)
+                    { 
+                            currentState = gameState.pause;
+                            timePRESS = 0.3;
+                       
+
                     }
-                    if (ennemis.alive)
-                    {
-                        currentState = gameState.win;
-                    }
-                    if (!playerShip.alive  )
-                    {
-                        currentState = gameState.lost;
-                    }
+
+                    timePRESS -= deltaT;
+
                     break;
 
                 case gameState.pause:
 
-                    if (keyPressed.Contains(Keys.P))
-                    {
-                        currentState = gameState.start;
-                    }
+                    if (keyPressed.Contains(Keys.P) && timePRESS < 0)
+                        {
+                            currentState = gameState.start;
+                            timePRESS = 0.3;
+                        }
+                       
+                     
+                      
+                    
+            timePRESS -= deltaT;
             break;
 
                 case gameState.lost:
@@ -264,6 +350,29 @@ namespace SpaceInvaders
         }
         #endregion
 
+        /// <summary>
+        /// condition to lose the Game
+        /// </summary>
+        public void conditionLevelWin()
+        {
+            if (ennemis.alive)
+            {
+                currentState = gameState.win;
+            }
+            
+        }
 
+        /// <summary>
+        /// cooodition to lose the Game
+        /// </summary>
+        public void conditionLevelLoose()
+        {
+            if (!playerShip.alive || ennemis.isOut())
+            {
+                currentState = gameState.lost;
+            }
+        }
     }
+
+
 }

@@ -111,8 +111,12 @@ namespace SpaceInvaders
         {
             game.keyPressed.Remove(e.KeyCode);
         }
+
         #endregion
 
+        private void GameForm_Load(object sender, EventArgs e)
+        {
 
+        }
     }
 }

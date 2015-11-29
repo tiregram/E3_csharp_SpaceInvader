@@ -9,23 +9,19 @@ namespace SpaceInvaders
 {
     class Spaceship :BasicObjet
     {
-        public Missile fireMisile;
+        public MunitionManager munitionStock;
+
         private double playerSpeed;
 
         public Spaceship(Vecteur2D pos , int li): base(pos,li,SpaceInvaders.Properties.Resources.ship3) {
-            playerSpeed = 100;
-            
+            playerSpeed = 200;
+            this.munitionStock = new MunitionManager();
         }
 
         public   override void draw(Graphics g) {
-            if (this.fireMisile != null)
-            {
-                this.fireMisile.draw(g);
-            }
            base.draw(g);
-
             g.DrawString("live:"+this.live, Game.defaultFont,Game.blackBrush, Game.gameSize.Width/2, Game.gameSize.Height - 30);
-
+            this.munitionStock.draw(g); 
         }
 
         public virtual  void move(double deltaT, HashSet<Keys> keyPressed)
@@ -43,11 +39,12 @@ namespace SpaceInvaders
             {
                 this.positionX -= (deltaT) * playerSpeed;
             }
-            if (fireMisile !=null && !fireMisile.alive) { fireMisile = null; }
-            if (keyPressed.Contains(Keys.Space) && (this.fireMisile == null) )
-            {
-                this.fireMisile = new Missile(new Vecteur2D(this.position) + new Vecteur2D(base.img.Width / 2, -base.img.Height), new Vecteur2D(0, -500), 5,true);
-            }
+
+
+            this.munitionStock.move(deltaT, keyPressed, this);
+
+           
+            
             foreach(Missile m in Missile.misileList)
                 if (!BasicShip.colitionTest(this,m))
                 {

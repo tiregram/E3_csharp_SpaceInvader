@@ -11,8 +11,8 @@ namespace SpaceInvaders
     
     class EnnemiBlock:BasicObjet
     {
-        
         private List<BasicShip> listSpaceship;
+
         public Vecteur2D speed;
         private Size s;
         private  Vecteur2D decalageBox;
@@ -28,14 +28,17 @@ namespace SpaceInvaders
             EnnemiBlock en = null;
             try {
                
-                System.IO.StreamReader file = new System.IO.StreamReader(lvl.nameFile);
+               string file =lvl.nameFile;
 
-                string[] tab = file.ReadLine().Split(' ');
+                string[] fileSplit = lvl.nameFile.Split('\r');
+                string[] tab = fileSplit[0].Split(' ');
 
                  en = new EnnemiBlock(new Vecteur2D(int.Parse(tab[0]), int.Parse(tab[1])), new Vecteur2D(30, 10));
                 string line;
-                while ((line = file.ReadLine()) != null)
+                
+                for (int i = 1; i < fileSplit.Length ; i++)
                 {
+                    line = fileSplit[i];
                     tab = line.Split(' ');
                     en.addLine(
                        int.Parse(tab[0]),
@@ -44,8 +47,10 @@ namespace SpaceInvaders
                            new Vecteur2D(),
                            int.Parse(tab[2]),
                            stringtoBitmap(tab[3])
+                           ,150+lvl.num*50//speed
                            )
                        );
+
                 }
             }
             catch (Exception a)
@@ -74,8 +79,6 @@ namespace SpaceInvaders
                     return SpaceInvaders.Properties.Resources.ship8;
                 case "ship9":
                     return SpaceInvaders.Properties.Resources.ship9;
-                
-
             }
             return null;
             
@@ -136,7 +139,8 @@ namespace SpaceInvaders
             }
 
             foreach (Missile m in Missile.misileList) { 
-                        if ( m.UserMisile && !BasicObjet.colitionTest(this,this.s + new Size((int)this.decalageBox.x,(int)this.decalageBox.y), m))
+                        if ( m.UserMisile &&
+                            !BasicObjet.colitionTest(this,this.s + new Size((int)this.decalageBox.x,(int)this.decalageBox.y), m))
                         {
                             foreach (BasicShip a in listSpaceship)
                             {
@@ -196,11 +200,34 @@ namespace SpaceInvaders
 
         }
 
+        public void colitionPlayer(BasicObjet bs)
+        {
+            foreach (BasicObjet en in listSpaceship)
+                if (!BasicObjet.colitionTest(bs, en)) {
+                    int old;
+                    old = en.live;
+                    en.live -= bs.live;
+                    bs.live -= old;
+                }
+        }
+        public bool isOut()
+        {
+            
+                if (this.position.y+this.s.Height + this.decalageBox.y >Game.gameSize.Height)
+                {
+                    return true;
+                }
+            return false;
+        }
+
+
         public override void draw(Graphics g) {
             g.DrawRectangle(new Pen(Color.Red,3),new Rectangle((int)( this.position.x + this.decalageBox.x), (int)( this.position.y + this.decalageBox.y), this.s.Width, this.s.Height));
             foreach (BasicShip a in listSpaceship) {
                 a.draw(g);
             }
+
+         
         }
 
     }

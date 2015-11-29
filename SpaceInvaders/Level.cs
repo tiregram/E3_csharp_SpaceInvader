@@ -20,24 +20,24 @@ namespace SpaceInvaders
             switch (num)
             {
                 case 1:
-                    return new Level("first explorer", @"C:\Users\ruhtra\level1.lvl.txt", num);
+                    return new Level("first explorer",SpaceInvaders.Properties.Resources.level1_lvl, num);
 
                 case 2:
-                    return new Level("the WAR begin", @"C:\Users\ruhtra\level2.lvl.txt", num);
+                    return new Level("the WAR begin", SpaceInvaders.Properties.Resources.level2_lvl, num);
 
                 case 3:
-                    return new Level("space crusader", @"C:\Users\ruhtra\level3.lvl.txt", num);
+                    return new Level("space crusader", SpaceInvaders.Properties.Resources.level3_lvl, num);
 
                 case 4:
-                    return new Level("one day in space", @"C:\Users\ruhtra\level4.lvl.txt", num);
+                    return new Level("one day in space", SpaceInvaders.Properties.Resources.level4_lvl, num);
 
                 case 5:
-                    return new Level("never surrender", @"C:\Users\ruhtra\level5.lvl.txt", num);
+                    return new Level("never surrender", SpaceInvaders.Properties.Resources.level5_lvl, num);
 
                 case 6:
-                    return new Level("SURVIVE", @"C:\Users\ruhtra\level6.lvl.txt", num);
+                    return new Level("SURVIVE", SpaceInvaders.Properties.Resources.level6_lvl, num);
                 default:
-                    return new Level("level 1", @"C:\Users\ruhtra\level1.lvl.txt", 1);
+                    return new Level("DIE", @"C:\Users\ruhtra\level1.lv6.txt", 1);
 
             }
 
