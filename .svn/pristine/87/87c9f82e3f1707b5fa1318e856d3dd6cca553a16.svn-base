@@ -1,0 +1,400 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Drawing;
+using System.Diagnostics;
+using System.Windows.Forms;
+using System.Media;
+using System.IO;
+
+namespace SpaceInvaders
+{
+    /// <summary>
+    /// this enum was use to manage the state machine
+    ///  
+    /// </summary>
+    enum gameState{
+        menu,
+        pause,
+        start,
+        startlevel,
+        win,
+        lost
+    }
+    /// <summary>
+    /// the first class to lauch the game,
+    /// 
+    /// </summary>
+    class Game
+    {
+        public double counterTime;
+        private MenuManager menuM;
+        
+        private Level lvl;
+        private double timePRESS;
+
+        public static Random rnd = new Random(42);
+        
+        public Spaceship playerShip;
+        public List<Bunker> listBunger;
+        private gameState currentState = gameState.start;
+
+        #region fields and properties
+
+        #region gameplay elements
+
+        #endregion
+
+        #region game technical elements
+        /// <summary>
+        /// Size of the game area
+        /// </summary>
+        public static Size gameSize;
+
+        private SoundPlayer sound;
+        private bool music = true;
+
+        public EnnemiBlock ennemis;
+
+        /// <summary>
+        /// State of the keyboard
+        /// </summary>
+        public HashSet<Keys> keyPressed = new HashSet<Keys>();
+
+        #endregion
+
+        #region static fields (helpers)
+
+        /// <summary>
+        /// Singleton for easy access
+        /// </summary>
+        public static Game game { get; private set; }
+
+        /// <summary>
+        /// A shared black brush
+        /// </summary>
+        public static Brush blackBrush = new SolidBrush(Color.Black);
+
+        /// <summary>
+        /// A shared simple font
+        /// </summary>
+        public static Font defaultFont = new Font("Times New Roman", 24, FontStyle.Bold, GraphicsUnit.Pixel);
+        #endregion
+
+        #endregion
+
+        #region constructors
+        /// <summary>
+        /// Singleton constructor
+        /// </summary>
+        /// <param name="gameSize">Size of the game area</param>
+        /// 
+        /// <returns></returns>
+        public static Game CreateGame(Size gameSize)
+        {
+            if (game == null)
+                game = new Game(gameSize);
+            return game;
+        }
+
+        /// <summary>
+        /// Private constructor
+        /// </summary>
+        /// <param name="gameSize">Size of the game area</param>
+        private Game(Size gameSize)
+        {
+            Game.gameSize = gameSize;
+
+            sound = new SoundPlayer(SpaceInvaders.Properties.Resources.soundGame);
+            music = true;
+
+            sound.PlayLooping();
+
+            this.menuM = new MenuManager();
+            this.menuM.add(new MenuItem("Jouer", "Lance une partie",
+                delegate() {
+                    this.currentState = gameState.startlevel ;
+                    return true; }
+            ));
+           
+
+            this.menuM.add(new MenuItem("Music on/off", "Active et désactive le son",
+                delegate () {
+                    if (this.music) {
+                        this.sound.Stop();
+                        this.music = false;
+                    }
+                    else
+                    {
+                        this.sound.PlayLooping();
+                        this.music = true;
+                    }
+                    return true;
+                }
+            ));
+
+            this.menuM.add(new MenuItem("Chargé", "Charge un fichier de niveaux", delegate () {
+               
+                OpenFileDialog openFileDialog1 = new OpenFileDialog();
+
+                openFileDialog1.InitialDirectory = "c:\\";
+                openFileDialog1.Filter = "txt files (*.txt)|*.txt|All files (*.*)|*.*";
+                openFileDialog1.FilterIndex = 2;
+                openFileDialog1.RestoreDirectory = true;
+
+                if (openFileDialog1.ShowDialog() == DialogResult.OK) 
+                {
+                    try
+                    {
+                        Console.WriteLine(openFileDialog1.FileName);
+                        this.lvl = new Level("CUSTON LEVEL", File.ReadAllText(openFileDialog1.FileName), 0);
+                        this.ennemis = EnnemiBlock.BUILDER_EnnemiBlock(this.lvl);
+                        if (this.ennemis == null)
+                        {
+                           MessageBox.Show("le fichier n'est pas valide, utilisé les files dans resource/level* comme exemple");
+                           return false;
+                        }
+                        this.counterTime = 3;
+                        this.currentState = gameState.startlevel;
+                        BasicInit();
+
+
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show("Error: Could not read file from disk. Original error: " + ex.Message);
+                    }
+                }
+
+            
+                
+
+                return true; }));
+            this.menuM.add(new MenuItem("Quitter", "quitte le Jeux ", delegate () { Application.Exit(); return true; }));
+            this.currentState = gameState.menu;
+            this.counterTime=0;
+        }
+
+        #endregion
+
+        #region methods
+
+        /// <summary>
+        /// Draw the whole game
+        /// </summary>
+        /// <param name="g">Graphics to draw in</param>
+        public void Draw(Graphics g)
+        {
+            
+            
+            switch (currentState) {
+                case gameState.pause:
+                    g.DrawString("PAUSE", defaultFont, blackBrush, 30, 30);
+
+                    break;
+                case gameState.startlevel:
+                    if (this.lvl == null) return;
+                    g.DrawString("Level:" + this.lvl.num + " " + this.lvl.name , defaultFont, blackBrush, 30, 30);
+                    g.DrawString("Wait   "+(int) this.counterTime, defaultFont, blackBrush, gameSize.Width/2, Game.gameSize.Height/2);
+                    break;
+
+                case gameState.win:
+                    g.DrawString("win", defaultFont, blackBrush, 30, 30);
+                    g.DrawString("press N", defaultFont, blackBrush, 30,100);
+                    break;
+                case gameState.lost:
+                    g.DrawString("lost", defaultFont, blackBrush, 30, 30);
+                    g.DrawString("press R", defaultFont, blackBrush, 30, 100);
+                    break;
+                case gameState.menu:
+                    this.menuM.draw(g);
+                    break;
+
+                case gameState.start:
+                    
+                    playerShip.draw(g);
+                    ennemis.draw(g);
+
+                    listBunger.ForEach(a => a.draw(g));
+                    Missile.misileList.ForEach(a=>a.draw(g));
+                    Bonus.bonusList.ForEach(a => a.draw(g));
+                    
+                    break;
+               
+            }
+        }
+
+
+
+
+        private void BasicInit()
+        {
+
+            this.playerShip = new Spaceship(new Vecteur2D(gameSize.Width / 2 - SpaceInvaders.Properties.Resources.ship5.Width / 2, gameSize.Height - 50), 5);
+            listBunger = new List<Bunker>();
+            for (int i = 0; i < 3; i++)
+            {
+                listBunger.Add(new Bunker(new Vecteur2D(Game.gameSize.Width * i / 3 + 30, (Game.gameSize.Height - 120))));
+            }
+        }
+        /// <summary>
+        /// Update game
+        /// you can
+        ///     change the possition the state of the game 
+        /// you can't
+        ///     draw somthing thanx to do it in draw()
+        /// </summary>
+        public void Update(double deltaT)
+        {
+            bool init = false;
+            switch (currentState)
+            {
+                case gameState.menu:
+                    this.menuM.move(deltaT,keyPressed);
+                    break;
+                case gameState.startlevel:
+
+                    if (this.lvl == null) {
+                        this.counterTime = 3;
+                        this.lvl = Level.Builder_getLevel(1); init = true;
+                        BasicInit();
+                        this.ennemis = EnnemiBlock.BUILDER_EnnemiBlock(this.lvl);
+                    }
+
+                    
+
+
+                    this.counterTime -= deltaT;
+
+                    if (this.counterTime < 0) {
+                        this.currentState = gameState.start;
+                    }
+                    
+
+                    break;
+
+                case gameState.start:
+
+                    Missile.misileList.RemoveAll(a => !a.alive);
+                    ennemis.move(deltaT);
+                    this.playerShip.move(deltaT, keyPressed);
+                    foreach (Bunker a in listBunger)
+                    {
+                        foreach (Missile b in Missile.misileList)
+                        {
+                            a.collision(b);
+                        }
+
+                    }
+
+                    foreach (Bonus a in Bonus.bonusList)
+                    {
+                        a.bonusFor = this.playerShip;
+                        a.move(deltaT);
+
+                    }
+                    Bonus.bonusList.RemoveAll(pi => !pi.alive);
+                    foreach (Missile a in Missile.misileList)
+                    {
+                        
+                        a.move(deltaT);
+                    }
+
+                    this.ennemis.colitionPlayer(this.playerShip);
+                    this.conditionLevelWin();
+                    this.conditionLevelLoose();
+
+                    if (keyPressed.Contains(Keys.P) && timePRESS < 0)
+                    { 
+                            currentState = gameState.pause;
+                            timePRESS = 0.3;
+                       
+
+                    }
+
+                    timePRESS -= deltaT;
+
+                    break;
+
+                case gameState.pause:
+
+                    if (keyPressed.Contains(Keys.P) && timePRESS < 0)
+                        {
+                            currentState = gameState.start;
+                            timePRESS = 0.3;
+                        }
+                       
+                     
+                      
+                    
+            timePRESS -= deltaT;
+            break;
+
+                case gameState.lost:
+
+
+                    if (keyPressed.Contains(Keys.R))
+                    {
+                        this.currentState = gameState.startlevel;
+                        this.lvl = null;
+                        Missile.misileList.RemoveAll( pi => true);
+                        Bonus.bonusList.RemoveAll(bo => true);
+
+                    }
+
+                    break;
+
+                case gameState.win:
+
+                    if (keyPressed.Contains(Keys.N))
+                    {
+                        Missile.misileList.ForEach(pi => pi.live = -1);
+                        Missile.misileList.RemoveAll(pi =>true);
+                        this.currentState = gameState.startlevel;
+                        if (this.lvl.num == 0) {
+                            this.currentState = gameState.menu;
+                            return;
+                        }
+                            
+                        this.lvl = Level.Builder_getLevel(this.lvl.num+1);
+                        this.ennemis = EnnemiBlock.BUILDER_EnnemiBlock(this.lvl);
+                        this.counterTime = 3;
+                    }
+                    break;/*
+                case gameState.restart:
+                    break;
+                case gameState.nextLevel:
+                    break;
+                case gameState.menu:
+                    break;*/
+            }
+        }
+        #endregion
+
+        /// <summary>
+        /// condition to lose the Game
+        /// </summary>
+        public void conditionLevelWin()
+        {
+            if (ennemis.alive)
+            {
+                currentState = gameState.win;
+            }
+            
+        }
+
+        /// <summary>
+        /// cooodition to lose the Game
+        /// </summary>
+        public void conditionLevelLoose()
+        {
+            if (!playerShip.alive || ennemis.isOut())
+            {
+                currentState = gameState.lost;
+            }
+        }
+    }
+
+
+}
